@@ -12,33 +12,32 @@ import time
 from binance.client import Client
 from binance.exceptions import BinanceAPIException
 import os
-
-# 設置API密鑰
-api_key = 'MmBtw1lNtsxgpwO59JLyOxSwm3TdvKa0vhwJZbuc5ogPfgLeUbgkXyTzZgKz5Oq9'
-secret_key = 'NWEhtYcoWs8PlGg99qDHM4vmKJA1jAnM97lxKoD1reEsSPwzjR6l3aNmrnVnKXp8'
+from flask import Flask
+import threading
 
 # 從環境變數中讀取 API 密鑰
 api_key = os.environ.get('API_KEY')
 secret_key = os.environ.get('SECRET_KEY')
 
-# 確保 API_KEY 和 API_SECRET_KEY 都存在，否則提醒錯誤
+# 確保 API_KEY 和 SECRET_KEY 都存在，否則提醒錯誤
 if not api_key or not secret_key:
     raise ValueError("API_KEY and SECRET_KEY must be set as environment variables.")
 
-
-
-
-# 創建Binance客戶端
+# 創建 Binance 客戶端
 client = Client(api_key, secret_key)
 
+# 設置交易對參數
 symbol = 'BTCUSDT'  # 交易對，Binance格式無斜槓
 timeframe = Client.KLINE_INTERVAL_5MINUTE  # 5分鐘K線
 short_window = 7     # 短期均線窗口
 long_window = 25     # 長期均線窗口
 position = None      # 當前持倉（'long', 'short', 或者 None）
 
+# 創建 Flask 應用
+app = Flask(__name__)
+
 def fetch_data(symbol, timeframe):
-    # 從Binance獲取歷史K線數據
+    # 從 Binance 獲取歷史 K 線數據
     try:
         klines = client.get_klines(symbol=symbol, interval=timeframe, limit=100)
         df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time',
@@ -74,7 +73,8 @@ def place_order(symbol, side, amount):
     except BinanceAPIException as e:
         print(f"An error occurred: {e}")
 
-def main():
+# 定義交易機器人邏輯
+def run_trading_bot():
     global position
     while True:
         df = fetch_data(symbol, timeframe)
@@ -83,47 +83,36 @@ def main():
 
             if signal == 'buy' and position != 'long':
                 print("Buy signal detected")
-                place_order(symbol, 'buy', 0.001)  # 假設購買0.001 BTC
+                place_order(symbol, 'buy', 0.001)  # 假設購買 0.001 BTC
                 position = 'long'
             elif signal == 'sell' and position != 'short':
                 print("Sell signal detected")
-                place_order(symbol, 'sell', 0.001)  # 假設賣出0.001 BTC
+                place_order(symbol, 'sell', 0.001)  # 假設賣出 0.001 BTC
                 position = 'short'
 
         time.sleep(60)  # 每分鐘檢查一次
 
-if __name__ == "__main__":
-    main()
+# 提供健康檢查端點，Render 會通過這個端點檢查服務狀態
+@app.route('/')
+def home():
+    return "交易機器人正在運行", 200
+
+@app.route('/health')
+def health():
+    return "健康狀態良好", 200
+
+# 在後台啟動交易機器人
+if __name__ == '__main__':
+    # 使用 threading 啟動交易機器人，讓 Flask 不阻塞
+    bot_thread = threading.Thread(target=run_trading_bot)
+    bot_thread.start()
+
+    # 啟動 Flask Web 服務
+    app.run(host='0.0.0.0', port=5000)
 
 
 
 
-# 查詢交易記錄的範例代碼：
-# from binance.client import Client
-# import os
-
-# # 設置API密鑰
-# api_key = 'MmBtw1lNtsxgpwO59JLyOxSwm3TdvKa0vhwJZbuc5ogPfgLeUbgkXyTzZgKz5Oq9'
-# api_secret = 'NWEhtYcoWs8PlGg99qDHM4vmKJA1jAnM97lxKoD1reEsSPwzjR6l3aNmrnVnKXp8'
-
-# # 設置測試網客戶端
-# client = Client(api_key, api_secret, testnet=True)
-
-# # 查詢賬戶的交易記錄
-# symbol = 'BTCUSDT'
-
-# # 查詢歷史訂單
-# orders = client.get_all_orders(symbol=symbol)
-
-# # 打印訂單信息
-# for order in orders:
-#     print(order)
-
-# # 查詢資金變動（可以查看買賣後的資金情況）
-# account_info = client.get_account()
-# balances = account_info['balances']
-# for balance in balances:
-#     print(balance)
 
 
 
