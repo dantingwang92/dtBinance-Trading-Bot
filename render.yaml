@@ -1,7 +1,7 @@
 services:
 - type: web
   name: dtBinance-Trading-Bot
-  region: Frankfurt (EU Central)
+  region: frankfurt
   env: python
   repo: https://github.com/dantingwang92/dtBinance-Trading-Bot.git
   buildCommand: pip install gunicorn -r requirements.txt
