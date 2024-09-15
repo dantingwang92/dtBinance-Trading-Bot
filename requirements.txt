@@ -1,2 +1,4 @@
 python-binance==1.0.15
 pandas==1.5.0
+Flask==2.2.3
+Werkzeug==2.2.2
