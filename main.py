@@ -28,7 +28,7 @@ client = Client(api_key, secret_key)
 
 # 設置交易對參數
 symbol = 'BTCUSDT'  # 交易對，Binance格式無斜槓
-timeframe = Client.KLINE_INTERVAL_5MINUTE  # 5分鐘K線
+timeframe = Client.KLINE_INTERVAL_15MINUTE  # 5分鐘K線
 short_window = 7     # 短期均線窗口
 long_window = 25     # 長期均線窗口
 position = None      # 當前持倉（'long', 'short', 或者 None）
@@ -45,6 +45,7 @@ def fetch_data(symbol, timeframe):
                                            'taker_buy_quote_asset_volume', 'ignore'])
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
         df['close'] = pd.to_numeric(df['close'])
+        print('data ready')
         return df
     except BinanceAPIException as e:
         print(f"Error fetching data: {e}")
@@ -61,7 +62,8 @@ def check_for_signal(df):
         return 'buy'
     elif short_sma.iloc[-1] < long_sma.iloc[-1] and short_sma.iloc[-2] >= long_sma.iloc[-2]:
         return 'sell'
-    return None
+    # return None
+    return print('no signal')
 
 def place_order(symbol, side, amount):
     try:
